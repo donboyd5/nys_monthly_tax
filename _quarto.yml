@@ -37,3 +37,11 @@ book:
 # file.access("C:/Users/donbo/Documents/R/win-library/4.5", 2)     
 # Set primary library path in .Rprofile
 # .libPaths("C:/Users/donbo/Documents/R/win-library/4.5")
+
+# My preferred file top matter:
+
+# ---
+# format: html
+# editor-options: 
+#   chunk-output-type: console
+# ---
