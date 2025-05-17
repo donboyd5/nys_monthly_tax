@@ -265,6 +265,7 @@ glimpse(df1)
 ### Known errors in the payroll mobility tax
 
 ```{r}
+#| label: mta-fixes
 
 fixes_mobility <- read_csv(
   "date, vname, fixval
@@ -286,10 +287,17 @@ df2 <- df1 |>
   )
 
 df2 |> filter(!is.na(fixval))
+
+```
+
+
+```{r}
+#| label: convert-to-dollars-and-save
+
 df3 <- df2 |>
-  select(-fixval)
+  select(-fixval) |>
+  mutate(across(c(value, value_original), \(x) x * 1000.))
 
 saveRDS(df3, fs::path(DDATA, "monthly_collections.rds"))
 
 ```
-
