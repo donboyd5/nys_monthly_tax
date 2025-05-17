@@ -18,6 +18,15 @@ source(here::here("r", "libraries_ts.r"))
 
 ```
 
+```{r}
+#| label: constants
+
+DRAW <- here::here("data-raw")
+DWORK <- here::here("data-work")
+DDATA <- here::here("data")
+
+```
+
 ## About the data
 
 The Tax Department reports monthly collections for each state tax on two state websites that do not appear to be integrated (that is, they need not be consistent with each other):
@@ -78,7 +87,7 @@ Contact: OTPA.OpenNYData@tax.ny.gov
 #| label: ONETIME-download-docs
 ```
 
-NOT READY: Need to figure out how to do downloads.
+NOT READY: figure out how to do downloads.
 
 ```{r}
 #| label: ONETIME-OpenData-download
@@ -92,12 +101,13 @@ url <- "https://data.ny.gov/api/views/2vni-8tmb/rows.csv?accessType=DOWNLOAD&sor
 fn <- "New_York_State__Local__and_Local_Purpose_Taxes_and_Fees_Collected_Monthly_by_the_Department_of_Taxation_and_Finance__Beginning_April_1996.csv"
 
 # fpath <- file.path(here::here("data", "dtf", fn))
-fpath <- path(here::here("data", "opendata", fn))
+fpath <- fs::path(DRAW, "opendata")
 
 download.file(url, destfile = fpath, mode = "wb")
 
 ```
 
+## Read the data, prune variables, and save unadjusted
 
 ```{r}
 #| label: read-opendata
@@ -105,21 +115,18 @@ download.file(url, destfile = fpath, mode = "wb")
 
 # dir <- r"(E:\data\nys_monthly_tax\data-raw\opendata\)"
 
-ddir <- here::here("data-raw", "opendata")
-
 fname <- "New_York_State__Local__and_Local_Purpose_Taxes_and_Fees_Collected_Monthly_by_the_Department_of_Taxation_and_Finance__Beginning_April_1996_20250516.csv"
 
-fpath <- fs::path(ddir, fname)
+fpath <- fs::path(DRAW, "opendata", fname)
 
-df <- vroom(fpath)
-glimpse(df)
-skim(df)
-count(df, `Month of Collections`) |> ht()
-
+df1 <- vroom(fpath)
+glimpse(df1)
+skim(df1)
+count(df1, `Month of Collections`) |> ht()
 
 ## CAUTION: verify that column names are consistent with the new variable names being given below ----
-names(df)
-df2 <- df |>
+names(df1)
+df2 <- df1 |>
   setNames(c(
     "sfy",
     "monthyear",
@@ -130,6 +137,21 @@ df2 <- df |>
     "typesort",
     "taxsort"
   )) |>
+  mutate(across(c(fymonth, typesort, taxsort), as.integer))
+
+cbind(names(df2)[1:length(names(df1))], names(df1))
+
+glimpse(df2)
+
+# check the data
+
+```
+
+```{r}
+#| label: inspect-dates
+
+# rationalize dates
+df3 <- df2 |>
   mutate(
     month = ifelse(fymonth <= 9, fymonth + 3, fymonth - 9),
     year = ifelse(month > 3, sfy - 1, sfy),
