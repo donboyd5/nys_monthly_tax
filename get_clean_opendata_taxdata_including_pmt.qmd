@@ -244,10 +244,13 @@ vnames <- read_delim(
 )
 
 df3 <- df2 |>
-  left_join(vnames, by = join_by(vtype, tax))
+  left_join(vnames, by = join_by(vtype, tax)) |>
+  relocate(vname, .before = tax)
 
 check <- count(df3, typesort, vtype, vname, tax)
 
+saveRDS(df3, fs::path(DWORK, "monthly_collections_unadjusted_vnames.rds"))
+rm(df1, df2, df3, check)
 
 ```
 
