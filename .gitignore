@@ -4,7 +4,13 @@
 .Ruserdata
 
 .quarto/
+/.quarto/
+_book/
+_freeze/
 
 *.csv
+*.html
 *.pdf
 *.rds
+
+
