@@ -254,8 +254,13 @@ rm(df1, df2, df3, check)
 
 ```
 
-
 ## Correct known errors
+
+```{r}
+df1 <- readRDS(fs::path(DWORK, "monthly_collections_unadjusted_vnames.rds"))
+glimpse(df1)
+
+```
 
 ### Known errors in the payroll mobility tax
 
@@ -263,12 +268,12 @@ rm(df1, df2, df3, check)
 
 fixes_mobility <- read_csv(
   "date, vname, fixval
-2016-11-01, pmt_wage, 96840
-2017-11-01, pmt_wage, 96741
-2018-11-01, pmt_wage, 99141
-2019-10-01, pmt_wage, 125215
-2019-11-01, pmt_wage, 102558
-2021-07-01, pmt_wage, 111347
+2016-11-01, local_pmtwage, 96840
+2017-11-01, local_pmtwage, 96741
+2018-11-01, local_pmtwage, 99141
+2019-10-01, local_pmtwage, 125215
+2019-11-01, local_pmtwage, 102558
+2021-07-01, local_pmtwage, 111347
 "
 )
 fixes_mobility
