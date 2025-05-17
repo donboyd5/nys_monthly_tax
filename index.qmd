@@ -1,0 +1,19 @@
+---
+format: html
+editor-options: 
+  chunk-output-type: console
+---
+
+# Get, clean, and save NYS monthly tax collections data
+
+The Tax Department reports monthly collections for each state tax on two state websites that do not appear to be integrated (that is, they need not be consistent with each other):
+
+-   Spreadsheets: A single spreadsheet for each month, with all taxes, is [here](https://www.tax.ny.gov/research/collections/monthly_tax_collections.htm). These spreadsheets provide a bit more detail (e.g., they have gross collections, refunds, and net; and they have monthly and fiscal year to date collections). They do not appear to have internal consistency controls (e.g., YTD collections may not equal the sum of monthly collections across separate spreadsheets).
+
+-   OpenData single data file: Monthly Tax Department collections data for most state taxes are [here](https://data.ny.gov/Government-Finance/New-York-State-Local-and-Local-Purpose-Taxes-and-F/2vni-8tmb) on the OpenData site. This is far more convenient to work with than spreadsheet data.
+
+As discussed below, there are errors in both data sets - some of the errors are the same in each data set and some are unique to one data set or the other.
+
+I suspect that they must keep one master correct data set internally that is not published; as time permits I will inquire and verify.
+
+
