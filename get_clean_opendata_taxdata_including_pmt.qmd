@@ -203,7 +203,40 @@ other, Other Revenues
 local, Local/local purpose taxes     
 "
 )
-taxtype
+vtypes
+
+df2 <- df1 |>
+  left_join(vtypes, by = join_by(type)) |>
+  relocate(vtype, .before = type)
+count(df2, typesort, vtype, type)
+
+vnames <- read_csv(
+  "vname, vtype, tax
+  pit_wh, pit, Withholding Tax  
+  pit_del, pit, Delinquencies
+  pit_et, pit, Estimated Tax
+  pit_fr, pit, Final Payments
+  pit_ref, pit, Less:  Refunds and Minor Offsets
+  pit_scoff, pit, Less:  State/City Offsets
+  pit_llc, pit, Limited Liability Company Fees
+  pit_net, pit, Net Collections
+  pit_gross, pit, Total Gross Collections
+
+  user_cannabis, user, Adult Use Cannabis
+  user_abt, user, Alcoholic Beverage Tax
+  user_ciglic, user, Cigarette Retailer Licenses Fees
+  user_cigvend, user, Cigarette Retailer Vending Machine Stickers
+  user_cigtax, user, Cigarette Tax
+
+  
+  "
+)
+
+df3 <- df2 |>
+  left_join(vnames, by = join_by(vtype, tax))
+
+check <- count(df3, typesort, vtype, vname, tax)
+
 
 ```
 
