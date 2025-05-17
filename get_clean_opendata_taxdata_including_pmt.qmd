@@ -158,11 +158,23 @@ df3 <- df2 |>
     date = as.Date(paste0(year, "/", month, "/", 1))
   ) |>
   arrange(date)
-max(df2$date)
-cbind(names(df2)[1:length(names(df))], names(df))
+max(df3$date)
+glimpse(df3)
+count(df3, fymonth, month)
+count(df3, month, fymonth)
+count(df3, date) |> ht()
 
-count(df2, fymonth, month)
-count(df2, month, fymonth)
+# are there any missing months?
+allmonths <- seq(min(df3$date), max(df3$date), by = "1 month")
+setdiff(allmonths, unique(df3$date)) # good, no missing months
+
+```
+
+```{r}
+#| label: pare-and-save
+
+df4 <- df3 |>
+  select(date, sfy, fymonth, type, tax, typesort, taxsort, value)
 
 saveRDS(df2, here::here("data", "monthly_collections.rds"))
 
