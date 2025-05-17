@@ -176,9 +176,57 @@ setdiff(allmonths, unique(df3$date)) # good, no missing months
 df4 <- df3 |>
   select(date, sfy, fymonth, type, tax, typesort, taxsort, value)
 
-saveRDS(df2, here::here("data", "monthly_collections.rds"))
+saveRDS(df4, fs::path(DWORK, "monthly_collections_unadjusted.rds"))
+
+rm(df1, df2, df3, df4)
+```
+
+## Add short variable names
+
+```{r}
+#| label: vnames
+
+df1 <- readRDS(here::here("data", "monthly_collections_unadjusted.rds"))
+glimpse(df1)
+
+vars <- count(df1, typesort, taxsort, type, tax)
+count(vars, typesort, type)
+
+taxtype <- read_csv(
+  "vtype, type
+pit, Personal Income Tax           
+user, Excise and User Taxes and Fees
+business, Business Taxes                
+transfer, Property Transfer Taxes       
+other, Other Revenues                
+local, Local/local purpose taxes     
+"
+)
+taxtype
 
 ```
+
+
+## Correct known errors
+
+### Known errors in the payroll mobility tax
+
+```{r}
+
+fixes_mobility <- read_csv(
+  "date, vname, fixval
+2016-11-01, pmt_wage, 96840
+2017-11-01, pmt_wage, 96741
+2018-11-01, pmt_wage, 99141
+2019-10-01, pmt_wage, 125215
+2019-11-01, pmt_wage, 102558
+2021-07-01, pmt_wage, 111347
+"
+)
+fixes_mobility
+
+```
+
 
 ```{r}
 #| label: ONETIME-clean-vnames-save-mta
