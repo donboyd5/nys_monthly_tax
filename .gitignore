@@ -4,3 +4,6 @@
 .Ruserdata
 
 .quarto/
+
+*.csv
+*.pdf
