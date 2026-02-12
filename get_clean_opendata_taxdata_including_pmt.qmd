@@ -1,6 +1,6 @@
 ---
 format: html
-editor-options: 
+editor-options:
   chunk-output-type: console
 ---
 
@@ -114,15 +114,17 @@ download.file(url, destfile = fpath, mode = "wb")
 #| eval: true
 
 # dir <- r"(E:\data\nys_monthly_tax\data-raw\opendata\)"
+#         New_York_State,_Local,_and_Local_Purpose_Taxes_and_Fees_Collected_Monthly_by_the_Department_of_Taxation_and_Finance__Beginning_April_1996_20260212.csv
 
-fname <- "New_York_State__Local__and_Local_Purpose_Taxes_and_Fees_Collected_Monthly_by_the_Department_of_Taxation_and_Finance__Beginning_April_1996_20250516.csv"
-
+fname <- "New_York_State,_Local,_and_Local_Purpose_Taxes_and_Fees_Collected_Monthly_by_the_Department_of_Taxation_and_Finance__Beginning_April_1996_20260212.csv"
 fpath <- fs::path(DRAW, "opendata", fname)
 
-df1 <- vroom(fpath)
+df1 <- vroom::vroom(fpath, col_types = vroom::cols(.default = "c"))
 glimpse(df1)
 skim(df1)
 count(df1, `Month of Collections`) |> ht()
+
+# inspect the data for oddball info
 
 ## CAUTION: verify that column names are consistent with the new variable names being given below ----
 names(df1)
@@ -137,13 +139,22 @@ df2 <- df1 |>
     "typesort",
     "taxsort"
   )) |>
-  mutate(across(c(fymonth, typesort, taxsort), as.integer))
+  mutate(
+    across(c(sfy, fymonth, typesort, taxsort), as.integer),
+    value = parse_number(value)
+  )
 
 cbind(names(df2)[1:length(names(df1))], names(df1))
 
 glimpse(df2)
 
+# check values needed to create dates
+count(df2, sfy)
+count(df2, fymonth)
+
 # check the data
+skimr::skim(df2)
+
 
 ```
 
@@ -167,6 +178,7 @@ count(df3, date) |> ht()
 # are there any missing months?
 allmonths <- seq(min(df3$date), max(df3$date), by = "1 month")
 setdiff(allmonths, unique(df3$date)) # good, no missing months
+skimr::skim(df3)
 
 ```
 
@@ -194,14 +206,16 @@ count(vars, typesort, type)
 
 # short names for tax types
 vtypes <- read_csv(
-  "vtype, type
-pit, Personal Income Tax           
+  I(
+    "vtype, type
+pit, Personal Income Tax
 user, Excise and User Taxes and Fees
-business, Business Taxes                
-transfer, Property Transfer Taxes       
-other, Other Revenues                
-local, Local/local purpose taxes     
+business, Business Taxes
+transfer, Property Transfer Taxes
+other, Other Revenues
+local, Local/local purpose taxes
 "
+  )
 )
 vtypes
 
@@ -212,8 +226,9 @@ count(df2, typesort, vtype, type)
 
 # continue to add variable names ----
 vnames <- read_delim(
-  "vname; vtype; tax
-  pit_wh; pit; Withholding Tax  
+  I(
+    "vname; vtype; tax
+  pit_wh; pit; Withholding Tax
   pit_del; pit; Delinquencies
   pit_et; pit; Estimated Tax
   pit_fr; pit; Final Payments
@@ -238,7 +253,8 @@ vnames <- read_delim(
   local_congestion; local; Congestion Surcharge
 
   local_art9186g; local; Article 9, Section 186g Local Surcharge
-  ",
+  "
+  ),
   delim = ";",
   trim_ws = TRUE
 )
@@ -265,10 +281,49 @@ glimpse(df1)
 ### Known errors in the payroll mobility tax
 
 ```{r}
-#| label: mta-fixes
+#| label: fix-known-errors
 
-fixes_mobility <- read_csv(
-  "date, vname, fixval
+# 2020-09-01, pit_wh, 3147150
+
+df1 |> filter(vname == "pit_wh") |> arrange(date) |> filter(year(date) == 2020)
+
+missing_records_base <- vroom::vroom(
+  I(
+    "date, vname, fixval_missing
+2020-09-01, pit_wh, 3147150
+"
+  )
+)
+# bring in other information for the missing record so that  we have a full record
+# get first non-missing record for the vname in the same sfy
+search <- missing_records_base |>
+  mutate(sfy = ifelse(month(date) > 3, year(date) + 1, year(date))) |>
+  select(sfy, vname)
+
+stubs <- df1 |>
+  inner_join(search, by = join_by(sfy, vname)) |>
+  group_by(sfy, vname) |>
+  filter(!is.na(value)) |>
+  slice_min(date, n = 1) |>
+  ungroup() |>
+  select(-date, -value)
+
+missing_records <- missing_records_base |>
+  left_join(stubs, by = join_by(vname))
+
+df2 <- df1 |>
+  bind_rows(missing_records) |>
+  mutate(
+    value_original = value,
+    value = ifelse(!is.na(fixval_missing), fixval_missing, value)
+  ) |>
+  relocate(value_original, .after = value)
+df2 |> filter(vname == "pit_wh") |> arrange(date) |> filter(year(date) == 2020)
+
+
+fixes_mobility <- vroom::vroom(
+  I(
+    "date, vname, fixval_correction
 2016-11-01, local_pmtwage, 96840
 2017-11-01, local_pmtwage, 96741
 2018-11-01, local_pmtwage, 99141
@@ -276,17 +331,19 @@ fixes_mobility <- read_csv(
 2019-11-01, local_pmtwage, 102558
 2021-07-01, local_pmtwage, 111347
 "
+  )
 )
 fixes_mobility
 
-df2 <- df1 |>
+df3 <- df2 |>
   left_join(fixes_mobility, by = join_by(date, vname)) |>
   mutate(
-    value_original = value,
-    value = ifelse(!is.na(fixval), fixval, value)
+    # value_original = value,
+    value = ifelse(!is.na(fixval_correction), fixval_correction, value)
   )
 
-df2 |> filter(!is.na(fixval))
+df3 |> filter(!is.na(fixval_missing))
+df3 |> filter(!is.na(fixval_correction))
 
 ```
 
@@ -294,8 +351,8 @@ df2 |> filter(!is.na(fixval))
 ```{r}
 #| label: convert-to-dollars-and-save
 
-df3 <- df2 |>
-  select(-fixval) |>
+df4 <- df3 |>
+  select(-fixval_missing, -fixval_correction) |>
   mutate(across(c(value, value_original), \(x) x * 1000.))
 
 saveRDS(df3, fs::path(DDATA, "monthly_collections.rds"))
