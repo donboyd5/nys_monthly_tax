@@ -355,6 +355,6 @@ df4 <- df3 |>
   select(-fixval_missing, -fixval_correction) |>
   mutate(across(c(value, value_original), \(x) x * 1000.))
 
-saveRDS(df3, fs::path(DDATA, "monthly_collections.rds"))
+saveRDS(df4, fs::path(DDATA, "monthly_collections.rds"))
 
 ```
