@@ -25,6 +25,12 @@ DRAW <- here::here("data-raw")
 DWORK <- here::here("data-work")
 DDATA <- here::here("data")
 
+fname_base <- "New_York_State_Local_and_Local_Purpose_Taxes_and_Fees_Collected_Monthly_by_the_Department_of_Taxation_and_Finance_Beginning_April_1996_"
+fname_date <- "2026-02-16"
+
+fname <- paste0(fname_base, fname_date, ".csv")
+fpath <- fs::path(DRAW, "opendata", fname)
+
 ```
 
 ## About the data
@@ -81,6 +87,8 @@ Contact: OTPA.OpenNYData@tax.ny.gov
 
 ![](images/image-960328823.png)
 
+
+
 ## Download docs and data from opendata
 
 ```{r}
@@ -94,15 +102,15 @@ NOT READY: figure out how to do downloads.
 #| eval: false
 #| include: false
 
-# Download based on data updated: May 17, 2023
+# pak::pak("r-lib/fs")
 
 # https://data.ny.gov/Government-Finance/New-York-State-Local-and-Local-Purpose-Taxes-and-F/2vni-8tmb
+
 url <- "https://data.ny.gov/api/views/2vni-8tmb/rows.csv?accessType=DOWNLOAD&sorting=true"
 fn <- "New_York_State__Local__and_Local_Purpose_Taxes_and_Fees_Collected_Monthly_by_the_Department_of_Taxation_and_Finance__Beginning_April_1996.csv"
-
-# fpath <- file.path(here::here("data", "dtf", fn))
 fpath <- fs::path(DRAW, "opendata")
 
+url <- "https://data.ny.gov/api/views/2vni-8tmb/rows.csv?accessType=DOWNLOAD&sorting=true"
 download.file(url, destfile = fpath, mode = "wb")
 
 ```
@@ -110,14 +118,11 @@ download.file(url, destfile = fpath, mode = "wb")
 ## Read the data, prune variables, and save unadjusted
 
 ```{r}
-#| label: read-opendata
+#| label: read-downloaded-opendata
 #| eval: true
 
 # dir <- r"(E:\data\nys_monthly_tax\data-raw\opendata\)"
 #         New_York_State,_Local,_and_Local_Purpose_Taxes_and_Fees_Collected_Monthly_by_the_Department_of_Taxation_and_Finance__Beginning_April_1996_20260212.csv
-
-fname <- "New_York_State,_Local,_and_Local_Purpose_Taxes_and_Fees_Collected_Monthly_by_the_Department_of_Taxation_and_Finance__Beginning_April_1996_20260212.csv"
-fpath <- fs::path(DRAW, "opendata", fname)
 
 df1 <- vroom::vroom(fpath, col_types = vroom::cols(.default = "c"))
 glimpse(df1)
@@ -177,7 +182,7 @@ count(df3, date) |> ht()
 
 # are there any missing months?
 allmonths <- seq(min(df3$date), max(df3$date), by = "1 month")
-setdiff(allmonths, unique(df3$date)) # good, no missing months
+setdiff(allmonths, unique(df3$date) |> sort()) # good, no missing months
 skimr::skim(df3)
 
 ```
@@ -273,7 +278,8 @@ rm(df1, df2, df3, check)
 ## Correct known errors
 
 ```{r}
-df1 <- readRDS(fs::path(DWORK, "monthly_collections_unadjusted_vnames.rds"))
+df0 <- readRDS(fs::path(DWORK, "monthly_collections_unadjusted_vnames.rds"))
+df1 <- df0 |> mutate(value_original = value, .after = value)
 glimpse(df1)
 
 ```
@@ -281,7 +287,10 @@ glimpse(df1)
 ### Known errors in the payroll mobility tax
 
 ```{r}
-#| label: fix-known-errors
+#| label: fix-missing-values
+#| eval: false
+
+# ONLY DO THIS IF DATA STILL ARE WRONG, SO CHECK FIRST
 
 # 2020-09-01, pit_wh, 3147150
 
@@ -311,15 +320,24 @@ stubs <- df1 |>
 missing_records <- missing_records_base |>
   left_join(stubs, by = join_by(vname))
 
-df2 <- df1 |>
+df1 <- df1 |>
   bind_rows(missing_records) |>
   mutate(
-    value_original = value,
-    value = ifelse(!is.na(fixval_missing), fixval_missing, value)
-  ) |>
-  relocate(value_original, .after = value)
-df2 |> filter(vname == "pit_wh") |> arrange(date) |> filter(year(date) == 2020)
+    value = ifelse(!is.na(fixval_missing), fixval_missing, value_original)
+  )
 
+df1 |> filter(vname == "pit_wh") |> arrange(date) |> filter(year(date) == 2020)
+
+# df3 |> filter(!is.na(fixval_missing))
+# df3 |> filter(!is.na(fixval_correction))
+
+```
+
+```{r}
+#| label: fix-bad-values
+#| eval: false
+
+# ONLY DO THIS IF VALUES ARE STILL BAD -- CHECK FIRST
 
 fixes_mobility <- vroom::vroom(
   I(
@@ -335,15 +353,18 @@ fixes_mobility <- vroom::vroom(
 )
 fixes_mobility
 
-df3 <- df2 |>
+# check the values
+fixes_mobility |>
+  left_join(df1, by = join_by(date, vname)) |>
+  select(date, vname, value, fixval_correction)
+
+df2 <- df1 |>
   left_join(fixes_mobility, by = join_by(date, vname)) |>
   mutate(
-    # value_original = value,
-    value = ifelse(!is.na(fixval_correction), fixval_correction, value)
+    value = ifelse(!is.na(fixval_correction), fixval_correction, value_original)
   )
 
-df3 |> filter(!is.na(fixval_missing))
-df3 |> filter(!is.na(fixval_correction))
+df2 |> filter(value != value_original)
 
 ```
 
@@ -351,10 +372,24 @@ df3 |> filter(!is.na(fixval_correction))
 ```{r}
 #| label: convert-to-dollars-and-save
 
-df4 <- df3 |>
-  select(-fixval_missing, -fixval_correction) |>
+df3 <- df2 |>
+  select(
+    date,
+    sfy,
+    fymonth,
+    typesort,
+    vtype,
+    type,
+    taxsort,
+    vname,
+    tax,
+    value,
+    value_original
+  ) |>
   mutate(across(c(value, value_original), \(x) x * 1000.))
 
-saveRDS(df4, fs::path(DDATA, "monthly_collections.rds"))
+glimpse(df3)
+
+saveRDS(df3, fs::path(DDATA, "monthly_collections.rds"))
 
 ```
