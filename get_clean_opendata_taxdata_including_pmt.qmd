@@ -95,7 +95,7 @@ Contact: OTPA.OpenNYData@tax.ny.gov
 #| label: ONETIME-download-docs
 ```
 
-NOT READY: figure out how to do downloads.
+**NOT READY: figure out how to do downloads.**
 
 ```{r}
 #| label: ONETIME-OpenData-download
@@ -276,6 +276,8 @@ rm(df1, df2, df3, check)
 ```
 
 ## Correct known errors
+
+**CAUTION: Verify before making any changes. Tax Department finally corrected the payroll mobility tax data for Oct and Nov 2022, in February 2026.**
 
 ```{r}
 df0 <- readRDS(fs::path(DWORK, "monthly_collections_unadjusted_vnames.rds"))
