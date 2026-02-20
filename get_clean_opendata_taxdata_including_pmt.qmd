@@ -106,9 +106,9 @@ NOT READY: figure out how to do downloads.
 
 # https://data.ny.gov/Government-Finance/New-York-State-Local-and-Local-Purpose-Taxes-and-F/2vni-8tmb
 
-url <- "https://data.ny.gov/api/views/2vni-8tmb/rows.csv?accessType=DOWNLOAD&sorting=true"
-fn <- "New_York_State__Local__and_Local_Purpose_Taxes_and_Fees_Collected_Monthly_by_the_Department_of_Taxation_and_Finance__Beginning_April_1996.csv"
-fpath <- fs::path(DRAW, "opendata")
+fname_date <- today()
+fname <- paste0(fname_base, fname_date, ".csv")
+fpath <- fs::path(DRAW, "opendata", fname)
 
 url <- "https://data.ny.gov/api/views/2vni-8tmb/rows.csv?accessType=DOWNLOAD&sorting=true"
 download.file(url, destfile = fpath, mode = "wb")
