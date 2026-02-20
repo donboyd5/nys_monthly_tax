@@ -149,7 +149,7 @@ df2 <- df1 |>
     value = parse_number(value)
   )
 
-cbind(names(df2)[1:length(names(df1))], names(df1))
+cbind(names(df2)[seq_along(names(df1))], names(df1))
 
 glimpse(df2)
 
